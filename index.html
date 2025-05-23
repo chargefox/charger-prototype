@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import ReactDOM from 'react-dom'; // Keep ReactDOM import for rendering
 import { ChevronDown, CheckCircle, Lock, Circle, HelpCircle, Info, XCircle } from 'lucide-react'; // Added Info and XCircle for status messages
 
+
 // Accordion Component
 const Accordion = ({ title, description, children, isCompleted, isDependent, isDisabled, statusIcon, onToggle, isOpen }) => {
   const IconComponent = statusIcon;
