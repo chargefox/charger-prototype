@@ -1,0 +1,939 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import ReactDOM from 'react-dom'; // Keep ReactDOM import for rendering
+import { ChevronDown, CheckCircle, Lock, Circle, HelpCircle, Info, XCircle } from 'lucide-react'; // Added Info and XCircle for status messages
+
+// Accordion Component
+const Accordion = ({ title, description, children, isCompleted, isDependent, isDisabled, statusIcon, onToggle, isOpen }) => {
+  const IconComponent = statusIcon;
+
+  return (
+    <div className={`mb-4 rounded-lg shadow-sm overflow-hidden transition-all duration-300 ${isDisabled ? 'bg-gray-100 text-gray-400' : 'bg-white'}`}>
+      <button
+        className={`flex justify-between items-center w-full p-6 text-lg font-semibold text-left ${isDisabled ? 'cursor-not-allowed' : 'cursor-pointer'} ${isOpen ? 'border-b border-gray-200' : ''}`}
+        onClick={onToggle}
+        disabled={isDisabled}
+      >
+        <div className="flex items-center">
+          <span className={`mr-4 ${isCompleted ? 'text-green-500' : 'text-gray-400'}`}>
+            <IconComponent size={24} />
+          </span>
+          <div>
+            {title}
+            <p className="text-sm font-normal text-gray-500 mt-1">{description}</p>
+          </div>
+        </div>
+        <ChevronDown className={`transform transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} size={20} />
+      </button>
+      <div
+        className={`grid transition-all duration-300 ease-in-out ${isOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}
+      >
+        <div className="overflow-hidden">
+          <div className="p-6 pt-4">
+            {children}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// FormField Component
+const FormField = ({ label, type, placeholder, required, value, onChange, options = [], className = '', helpText, maxLength, checked }) => {
+  const inputClasses = "mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm";
+  const labelClasses = "block text-sm font-medium text-gray-700";
+
+  return (
+    <div className={`mb-4 ${className}`}>
+      <label className={labelClasses}>
+        {label} {required && <span className="text-red-500">*</span>}
+        {helpText && (
+          <span className="ml-1 text-gray-400 cursor-help" title={helpText}>
+            <HelpCircle size={16} className="inline-block align-text-bottom" />
+          </span>
+        )}
+      </label>
+      {type === 'select' ? (
+        <select value={value} onChange={onChange} className={inputClasses}>
+          <option value="">{placeholder}</option>
+          {options.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      ) : type === 'radio' ? (
+        <div className="mt-2 space-y-2">
+          {options.map((option) => (
+            <div key={option.value} className="flex items-center">
+              <input
+                id={option.value}
+                name={label} // Use label as name for radio group
+                type="radio"
+                value={option.value}
+                checked={value === option.value}
+                onChange={onChange}
+                className="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300"
+              />
+              <label htmlFor={option.value} className="ml-2 block text-sm text-gray-900">
+                {option.label}
+              </label>
+            </div>
+          ))}
+        </div>
+      ) : type === 'textarea' ? (
+        <textarea
+          placeholder={placeholder}
+          value={value}
+          onChange={onChange}
+          className={`${inputClasses} h-24 resize-y`}
+          required={required}
+          maxLength={maxLength}
+        ></textarea>
+      ) : type === 'checkbox' ? (
+        <div className="flex items-center mt-2">
+          <input
+            id={label.replace(/\s/g, '_').toLowerCase()} // Create a simple ID
+            type="checkbox"
+            checked={checked}
+            onChange={onChange}
+            className="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded"
+          />
+          <label htmlFor={label.replace(/\s/g, '_').toLowerCase()} className="ml-2 block text-sm text-gray-900">
+            {label}
+          </label>
+        </div>
+      ) : (
+        <input
+          type={type}
+          placeholder={placeholder}
+          value={value}
+          onChange={onChange}
+          className={inputClasses}
+          required={required}
+          maxLength={maxLength}
+        />
+      )}
+      {maxLength && type === 'textarea' && (
+        <p className="text-right text-xs text-gray-500 mt-1">
+          {value ? value.length : 0}/{maxLength}
+        </p>
+      )}
+    </div>
+  );
+};
+
+// ConfirmationModal Component
+const ConfirmationModal = ({ isOpen, onClose, onConfirm, formData }) => {
+  if (!isOpen) return null;
+
+  // Helper to summarize form data
+  const summarizeFormData = (data) => {
+    const summary = [];
+
+    // Station Details
+    summary.push(<h4>Station Details</h4>);
+    summary.push(<p>Visibility: <strong>{data.stationDetails.stationVisibility || 'N/A'}</strong></p>);
+    summary.push(<p>Location Name: <strong>{data.stationDetails.locationName || 'N/A'}</strong></p>);
+    summary.push(<p>Address: <strong>{data.stationDetails.locationAddress || 'N/A'}</strong></p>);
+    summary.push(<p>Coordinates: <strong>{data.stationDetails.latitude || 'N/A'}, {data.stationDetails.longitude || 'N/A'}</strong></p>);
+    if (data.stationDetails.directions) {
+      summary.push(<p>Directions: <strong>{data.stationDetails.directions}</strong></p>);
+    }
+
+    // Stickers and Labels
+    summary.push(<h4>Stickers & Labels</h4>);
+    summary.push(<p>Applied: <strong>{data.stickersLabels.stickersApplied ? (data.stickersLabels.stickersApplied === 'yes' ? 'Yes' : 'No') : 'N/A'}</strong></p>);
+    summary.push(<p>Station Number: <strong>{data.stickersLabels.stationNumber || 'N/A'}</strong></p>);
+
+    // Network Communication
+    summary.push(<h4>Network Communication</h4>);
+    const connTypeLabel = data.networkCommunication.connectionType ?
+      (data.networkCommunication.connectionType === 'sim_card_chargefox' ? 'SIM card provided by Chargefox' :
+       data.networkCommunication.connectionType === 'i_have_my_own_sim_card' ? 'I have my own SIM card' :
+       'Ethernet / Wi-Fi') : 'N/A';
+    summary.push(<p>Connection Type: <strong>{connTypeLabel}</strong></p>);
+    if (data.networkCommunication.connectionType === 'sim_card_chargefox') {
+      summary.push(<p>SIM ICCID: <strong>{data.networkCommunication.simCardICCID || 'N/A'}</strong></p>);
+    } else if (data.networkCommunication.provider) {
+      summary.push(<p>Provider: <strong>{data.networkCommunication.provider}</strong></p>);
+    }
+
+    // Pricing
+    summary.push(<h4>Pricing</h4>);
+    summary.push(<p>Base Price per kWh: <strong>{data.pricing.basePricePerKwh ? `$${data.pricing.basePricePerKwh}` : 'Free'}</strong></p>);
+    if (data.pricing.addFreePeriod) {
+      summary.push(<p>Free Period: <strong>{data.pricing.freeMinutes || 'N/A'} minutes</strong></p>);
+    }
+    if (data.pricing.addPeakPricing) {
+      summary.push(<p>Peak Pricing: <strong>${data.pricing.peakPricePerKwh || 'N/A'}</strong> ({data.pricing.peakStartTime || 'N/A'} - {data.pricing.peakEndTime || 'N/A'})</p>);
+    }
+
+    // Connect to Chargefox
+    summary.push(<h4>Chargefox Connection</h4>);
+    summary.push(<p>OCPP ID: <strong>{data.connectToChargefox.ocppId || 'N/A'}</strong></p>);
+    summary.push(<p>Connection Status: <strong>{data.connectToChargefox.connected ? 'Connected' : 'Not Connected'}</strong></p>);
+
+    // Hardware Details (if connected)
+    if (data.connectToChargefox.connected) {
+      summary.push(<h4>Hardware Details</h4>);
+      summary.push(<p>Charger Type: <strong>{data.hardwareDetails.chargerType || 'N/A'}</strong></p>);
+      summary.push(<p>Connector Type: <strong>{data.hardwareDetails.connectorType || 'N/A'}</strong></p>);
+      summary.push(<p>Power Rating: <strong>{data.hardwareDetails.powerRating || 'N/A'} kW</strong></p>);
+    }
+
+
+    return summary;
+  };
+
+  const summaryContent = summarizeFormData(formData);
+
+  return (
+    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white p-8 rounded-lg shadow-xl max-w-lg w-full m-4">
+        <h3 className="text-xl font-bold text-gray-800 mb-4">Review Station Details</h3>
+        <div className="max-h-96 overflow-y-auto mb-4 p-2 border border-gray-200 rounded">
+          {summaryContent.map((item, index) => (
+            <React.Fragment key={index}>{item}</React.Fragment>
+          ))}
+        </div>
+
+        <div className="bg-yellow-50 border-l-4 border-yellow-400 text-yellow-800 p-4 mb-4" role="alert">
+          <p className="font-bold">Important Information:</p>
+          <ul className="list-disc list-inside text-sm mt-2">
+            <li>Once submitted, you cannot edit your station while it is in review.</li>
+            <li>Station reviews typically take 1-3 business days.</li>
+          </ul>
+        </div>
+
+        <p className="text-sm text-gray-600 mb-4">
+          If you need help with your submission, please email <a href="mailto:support@chargefox.com" className="text-blue-600 hover:underline">support@chargefox.com</a>.
+        </p>
+
+        <div className="flex justify-end space-x-3">
+          <button
+            onClick={onClose}
+            className="px-6 py-3 rounded-md font-semibold text-gray-700 border border-gray-300 hover:bg-gray-50 transition-colors duration-200"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            className="px-6 py-3 rounded-md font-semibold text-white bg-blue-600 hover:bg-blue-700 transition-colors duration-200"
+          >
+            Confirm Submission
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
+// SidePanel Component
+const SidePanel = ({ isOpen, onClose, onSave, onSubmit }) => {
+  const [openAccordion, setOpenAccordion] = useState(null); // State to manage which accordion is open
+  const [showConfirmModal, setShowConfirmModal] = useState(false); // State for confirmation modal
+
+  // Form Data State
+  const [formData, setFormData] = useState({
+    stationDetails: {
+      stationVisibility: '',
+      locationName: '',
+      locationAddress: '',
+      latitude: '',
+      longitude: '',
+      directions: '',
+    },
+    stickersLabels: {
+      stickersApplied: '',
+      stationNumber: ''
+    },
+    networkCommunication: {
+      connectionType: '', // Now a radio button value
+      simCardICCID: '',   // New field for SIM ICCID
+      provider: ''
+    },
+    pricing: {
+      basePricePerKwh: '', // Main pricing field
+      addFreePeriod: false, // Checkbox state
+      freeMinutes: '',     // Conditional field
+      addPeakPricing: false, // Checkbox state
+      peakStartTime: '',   // Conditional field
+      peakEndTime: '',     // Conditional field
+      peakPricePerKwh: ''  // Conditional field
+    },
+    connectToChargefox: {
+      ocppId: '',
+      connected: false, // True if successfully connected
+      status: 'idle', // 'idle', 'loading', 'success', 'error'
+      message: ''
+    },
+    hardwareDetails: { chargerType: '', connectorType: '', powerRating: '' },
+  });
+
+  // Section Completion Status State
+  const [sectionStatus, setSectionStatus] = useState({
+    visibilityLocation: { completed: false, requiredFields: ['stationVisibility', 'locationName', 'locationAddress', 'latitude', 'longitude'] },
+    stickersLabels: { completed: false, requiredFields: ['stickersApplied', 'stationNumber'] },
+    networkCommunication: { completed: false, requiredFields: ['connectionType'] }, // Will be conditionally checked in checkSectionCompletion
+    pricing: { completed: false, requiredFields: ['basePricePerKwh'] }, // basePricePerKwh is always required for pricing completion
+    connectToChargefox: { completed: false, requiredFields: ['ocppId'] },
+    hardwareDetails: { completed: false, requiredFields: ['chargerType', 'connectorType', 'powerRating'], dependsOn: 'connectToChargefox' },
+  });
+
+  // Function to check if a section is completed
+  const checkSectionCompletion = useCallback((sectionKey, data) => {
+    const section = sectionStatus[sectionKey];
+    if (!section) return false;
+
+    // Check dependency first
+    if (section.dependsOn) {
+      const dependentSectionKey = section.dependsOn;
+      if (!sectionStatus[dependentSectionKey] || !sectionStatus[dependentSectionKey].completed) {
+        return false; // Dependent section not completed
+      }
+    }
+
+    // Special handling for 'connectToChargefox' completion
+    if (sectionKey === 'connectToChargefox') {
+        return data.connectToChargefox.status === 'success';
+    }
+
+    // Special handling for 'networkCommunication' completion
+    if (sectionKey === 'networkCommunication') {
+        if (!data.networkCommunication.connectionType) return false; // Connection type radio is always required
+
+        if (data.networkCommunication.connectionType === 'sim_card_chargefox') {
+            return data.networkCommunication.simCardICCID.trim() !== ''; // ICCID required only for this option
+        }
+        // For other connection types (I have my own SIM card, Ethernet/Wi-Fi), only the radio selection is enough
+        return true;
+    }
+
+    // Special handling for 'pricing' completion
+    if (sectionKey === 'pricing') {
+        // Base price is always required
+        if (data.pricing.basePricePerKwh.trim() === '') return false;
+
+        // If free period is added, freeMinutes is required
+        if (data.pricing.addFreePeriod && data.pricing.freeMinutes.trim() === '') return false;
+
+        // If peak pricing is added, all peak fields are required
+        if (data.pricing.addPeakPricing && (
+            data.pricing.peakStartTime.trim() === '' ||
+            data.pricing.peakEndTime.trim() === '' ||
+            data.pricing.peakPricePerKwh.trim() === ''
+        )) return false;
+
+        return true;
+    }
+
+    // Check all required fields for other sections
+    for (const field of section.requiredFields) {
+      let fieldValue;
+      if (sectionKey === 'visibilityLocation') {
+        fieldValue = data.stationDetails[field];
+      } else if (sectionKey === 'stickersLabels') {
+        fieldValue = data.stickersLabels[field];
+      } else {
+        fieldValue = data[Object.keys(data).find(k => k.startsWith(sectionKey.split(/(?=[A-Z])/).join('').toLowerCase()))]?.[field];
+        if (typeof fieldValue === 'undefined') {
+          fieldValue = data[sectionKey]?.[field];
+        }
+      }
+
+      if (typeof fieldValue === 'string' && fieldValue.trim() === '') {
+        return false;
+      }
+      if (fieldValue === null || typeof fieldValue === 'undefined') {
+        return false;
+      }
+    }
+    return true;
+  }, [sectionStatus]);
+
+  // Update section completion status whenever formData changes
+  useEffect(() => {
+    setSectionStatus(prevStatus => {
+      const newStatus = { ...prevStatus };
+      for (const key in newStatus) {
+        const isCompleted = checkSectionCompletion(key, formData);
+        newStatus[key] = { ...newStatus[key], completed: isCompleted };
+      }
+      return newStatus;
+    });
+  }, [formData, checkSectionCompletion]);
+
+  // Handle form field changes
+  const handleChange = (section, field, value) => {
+    setFormData(prevData => ({
+      ...prevData,
+      [section]: {
+        ...prevData[section],
+        [field]: value,
+      },
+    }));
+    // If OCPP ID changes, reset status
+    if (section === 'connectToChargefox' && field === 'ocppId') {
+      setFormData(prevData => ({
+        ...prevData,
+        connectToChargefox: { ...prevData.connectToChargefox, status: 'idle', message: '', connected: false }
+      }));
+    }
+    // If connectionType changes, reset ICCID if not 'sim_card_chargefox'
+    if (section === 'networkCommunication' && field === 'connectionType' && value !== 'sim_card_chargefox') {
+      setFormData(prevData => ({
+        ...prevData,
+        networkCommunication: { ...prevData.networkCommunication, simCardICCID: '' }
+      }));
+    }
+  };
+
+  // Simulate "Connect to Chargefox" action with states
+  const handleConnectChargefox = () => {
+    const ocppId = formData.connectToChargefox.ocppId.trim();
+
+    if (ocppId === '') {
+      setFormData(prevData => ({
+        ...prevData,
+        connectToChargefox: { ...prevData.connectToChargefox, status: 'error', message: 'OCPP ID cannot be empty.' }
+      }));
+      return;
+    }
+
+    setFormData(prevData => ({
+      ...prevData,
+      connectToChargefox: { ...prevData.connectToChargefox, status: 'loading', message: 'Connection in progress. This may take up to 10 minutes. You can close this page and revisit it later.' }
+    }));
+
+    // Simulate API call
+    setTimeout(() => {
+      if (ocppId === 'chargefox') { // Simulate success ID
+        setFormData(prevData => ({
+          ...prevData,
+          connectToChargefox: { ...prevData.connectToChargefox, status: 'success', message: 'Station successfully connected to Chargefox. You can now configure your hardware details.', connected: true }
+        }));
+      } else if (ocppId === 'invalid-id') { // Simulate invalid ID
+        setFormData(prevData => ({
+          ...prevData,
+          connectToChargefox: { ...prevData.connectToChargefox, status: 'error', message: 'Connection unsuccessful. Please check the chargebox identity for typos and try again.', connected: false }
+        }));
+      } else { // Simulate generic error
+        setFormData(prevData => ({
+          ...prevData,
+          connectToChargefox: { ...prevData.connectToChargefox, status: 'error', message: 'Connection failed. Please try again later.', connected: false }
+        }));
+      }
+    }, 4000); // Simulate 4-second network delay
+  };
+
+  // Disconnect function removed as per request
+
+  // Handle submission button click - show confirmation modal
+  const handlePreSubmit = () => {
+    if (Object.values(sectionStatus).every(s => s.completed)) {
+      setShowConfirmModal(true);
+    } else {
+      alert("Please complete all required sections before submitting.");
+    }
+  };
+
+  // Actual submission after confirmation
+  const handleConfirmSubmit = () => {
+    setShowConfirmModal(false); // Close modal
+    onSubmit(formData); // Call the parent onSubmit
+  };
+
+  // Check if all sections are completed for submission
+  const isFormSubmittable = Object.values(sectionStatus).every(s => s.completed);
+
+  if (!isOpen) return null;
+
+  const connectStatus = formData.connectToChargefox.status;
+  const connectMessage = formData.connectToChargefox.message;
+
+  return (
+    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-end z-50">
+      <div className="relative w-full max-w-xl bg-white shadow-xl flex flex-col h-full">
+        {/* Header */}
+        <div className="flex justify-between items-center p-6 border-b border-gray-200">
+          <h2 className="text-2xl font-bold text-gray-800">Station details</h2>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Info Text */}
+        <div className="p-6 text-gray-600 text-sm border-b border-gray-200">
+          Fill in the details below to set up your charging station. You can save and return
+          to this form at any time before submitting to Chargefox for final review.
+        </div>
+
+        {/* Accordion Sections */}
+        <div className="flex-1 overflow-y-auto p-6">
+          {/* Visibility and location */}
+          <Accordion
+            title="Visibility and location"
+            description="Enter the station's visibility type and location details."
+            isOpen={openAccordion === 'visibilityLocation'}
+            onToggle={() => setOpenAccordion(openAccordion === 'visibilityLocation' ? null : 'visibilityLocation')}
+            isCompleted={sectionStatus.visibilityLocation.completed}
+            statusIcon={sectionStatus.visibilityLocation.completed ? CheckCircle : Circle}
+          >
+            <FormField
+              label="Station visibility"
+              type="radio"
+              required
+              value={formData.stationDetails.stationVisibility}
+              onChange={(e) => handleChange('stationDetails', 'stationVisibility', e.target.value)}
+              options={[
+                { value: 'public', label: 'Public' },
+                { value: 'private', label: 'Private' },
+              ]}
+              helpText="For public stations, this name will be displayed to drivers in the app."
+            />
+            <FormField
+              label="Location name"
+              type="text"
+              required
+              value={formData.stationDetails.locationName}
+              onChange={(e) => handleChange('stationDetails', 'locationName', e.target.value)}
+              placeholder="e.g., Melbourne Office Carpark 2"
+              helpText="For public stations, this name will be displayed to drivers in the app."
+            />
+            <FormField
+              label="Location address"
+              type="text"
+              required
+              value={formData.stationDetails.locationAddress}
+              onChange={(e) => handleChange('stationDetails', 'locationAddress', e.target.value)}
+              placeholder="Enter location address"
+            />
+            {/* Map Placeholder */}
+            <div className="bg-gray-200 h-56 w-full rounded-md flex items-center justify-center text-gray-500 mb-4">
+              <img
+                src="https://participate.melbourne.vic.gov.au/packages/the_hive_projects/images/the_hive_project_map/basemap_MapboxStreets.jpg"
+                alt="Placeholder map of Melbourne"
+                className="w-full h-full object-cover rounded-md"
+                onError={(e) => { e.target.onerror = null; e.target.src="https://placehold.co/400x192/ADD8E6/000000?text=Map+Error"; }} // Fallback
+              />
+            </div>
+            <p className="text-sm text-gray-600 mb-4">
+              Drag the map pin to the precise position of the station to automatically update the coordinates.
+            </p>
+            <div className="flex space-x-4">
+              <FormField
+                label="Latitude"
+                type="number"
+                required
+                value={formData.stationDetails.latitude}
+                onChange={(e) => handleChange('stationDetails', 'latitude', e.target.value)}
+                placeholder="-37.816335755470924"
+                className="flex-1"
+              />
+              <FormField
+                label="Longitude"
+                type="number"
+                required
+                value={formData.stationDetails.longitude}
+                onChange={(e) => handleChange('stationDetails', 'longitude', e.target.value)}
+                placeholder="145.01334547976228"
+                className="flex-1"
+              />
+            </div>
+            <FormField
+              label="Directions"
+              type="textarea"
+              value={formData.stationDetails.directions}
+              onChange={(e) => handleChange('stationDetails', 'directions', e.target.value)}
+              placeholder="e.g., Enter from Bourke Street and turn right after entering carpark 2."
+              helpText="Displayed in the app to help drivers easily locate the station."
+              maxLength={150}
+            />
+          </Accordion>
+
+          {/* Stickers and labels */}
+          <Accordion
+            title="Stickers and labels"
+            description="Add information about physical labels on the station."
+            isOpen={openAccordion === 'stickersLabels'}
+            onToggle={() => setOpenAccordion(openAccordion === 'stickersLabels' ? null : 'stickersLabels')}
+            isCompleted={sectionStatus.stickersLabels.completed}
+            statusIcon={sectionStatus.stickersLabels.completed ? CheckCircle : Circle}
+          >
+            <FormField
+              label="Are station stickers and port labels applied to the station?"
+              type="radio"
+              required
+              value={formData.stickersLabels.stickersApplied}
+              onChange={(e) => handleChange('stickersLabels', 'stickersApplied', e.target.value)}
+              options={[
+                { value: 'yes', label: 'Yes' },
+                { value: 'no', label: 'No' },
+              ]}
+            />
+            {formData.stickersLabels.stickersApplied === 'no' && (
+              <div className="bg-blue-50 border-l-4 border-blue-400 text-blue-800 p-4 mb-4" role="alert">
+                <p className="font-bold">Station stickers and labels are required before going live.</p>
+                <p>Contact support@chargefox.com to arrange delivery.</p>
+              </div>
+            )}
+            <FormField
+              label="Station number"
+              type="text"
+              required
+              value={formData.stickersLabels.stationNumber}
+              onChange={(e) => handleChange('stickersLabels', 'stationNumber', e.target.value)}
+              placeholder="Enter the station number"
+              helpText="Enter the Chargefox station number printed on the sticker."
+            />
+          </Accordion>
+
+          {/* Network communication */}
+          <Accordion
+            title="Network communication"
+            description="Choose how the station will connect to the internet."
+            isOpen={openAccordion === 'networkCommunication'}
+            onToggle={() => setOpenAccordion(openAccordion === 'networkCommunication' ? null : 'networkCommunication')}
+            isCompleted={sectionStatus.networkCommunication.completed}
+            statusIcon={sectionStatus.networkCommunication.completed ? CheckCircle : Circle}
+          >
+            <FormField
+              label="Connection type"
+              type="radio"
+              required
+              value={formData.networkCommunication.connectionType}
+              onChange={(e) => handleChange('networkCommunication', 'connectionType', e.target.value)}
+              options={[
+                { value: 'sim_card_chargefox', label: 'SIM card provided by Chargefox' },
+                { value: 'i_have_my_own_sim_card', label: 'I have my own SIM card' },
+                { value: 'ethernet_wifi', label: 'Ethernet / Wi-Fi' },
+              ]}
+            />
+            {formData.networkCommunication.connectionType === 'sim_card_chargefox' && (
+              <FormField
+                label="SIM card ICCID"
+                type="text"
+                required
+                value={formData.networkCommunication.simCardICCID}
+                onChange={(e) => handleChange('networkCommunication', 'simCardICCID', e.target.value)}
+                placeholder="Enter SIM ICCID"
+                helpText="Unique 19-20 digit number typically located on the SIM card."
+                maxLength={20}
+              />
+            )}
+            {/* The 'Provider' field is now only shown if not 'sim_card_chargefox' */}
+            {formData.networkCommunication.connectionType !== 'sim_card_chargefox' && formData.networkCommunication.connectionType !== '' && (
+              <FormField
+                label="Provider"
+                type="text"
+                value={formData.networkCommunication.provider}
+                onChange={(e) => handleChange('networkCommunication', 'provider', e.target.value)}
+                placeholder="e.g., Telstra, Optus"
+              />
+            )}
+          </Accordion>
+
+          {/* Pricing */}
+          <Accordion
+            title="Pricing"
+            description="Choose how you want to price charging sessions at this station."
+            isOpen={openAccordion === 'pricing'}
+            onToggle={() => setOpenAccordion(openAccordion === 'pricing' ? null : 'pricing')}
+            isCompleted={sectionStatus.pricing.completed}
+            statusIcon={sectionStatus.pricing.completed ? CheckCircle : Circle}
+          >
+            <FormField
+              label="Price per kWh"
+              type="number"
+              required
+              value={formData.pricing.basePricePerKwh}
+              onChange={(e) => handleChange('pricing', 'basePricePerKwh', e.target.value)}
+              placeholder="$ 0.35"
+              helpText="Leave this field blank if charging will be free at this station."
+            />
+
+            <FormField
+              label="Add a free charging period at the beginning"
+              type="checkbox"
+              checked={formData.pricing.addFreePeriod}
+              onChange={(e) => handleChange('pricing', 'addFreePeriod', e.target.checked)}
+            />
+            {formData.pricing.addFreePeriod && (
+              <FormField
+                label="Free for how many minutes?"
+                type="number"
+                required
+                value={formData.pricing.freeMinutes}
+                onChange={(e) => handleChange('pricing', 'freeMinutes', e.target.value)}
+                placeholder="15"
+              />
+            )}
+
+            <FormField
+              label="Add peak pricing"
+              type="checkbox"
+              checked={formData.pricing.addPeakPricing}
+              onChange={(e) => handleChange('pricing', 'addPeakPricing', e.target.checked)}
+            />
+            {formData.pricing.addPeakPricing && (
+              <>
+                <div className="flex space-x-4">
+                  <FormField
+                    label="Start time"
+                    type="time"
+                    required
+                    value={formData.pricing.peakStartTime}
+                    onChange={(e) => handleChange('pricing', 'peakStartTime', e.target.value)}
+                    className="flex-1"
+                  />
+                  <FormField
+                    label="End time"
+                    type="time"
+                    required
+                    value={formData.pricing.peakEndTime}
+                    onChange={(e) => handleChange('pricing', 'peakEndTime', e.target.value)}
+                    className="flex-1"
+                  />
+                </div>
+                <FormField
+                  label="Peak pricing per kWh"
+                  type="number"
+                  required
+                  value={formData.pricing.peakPricePerKwh}
+                  onChange={(e) => handleChange('pricing', 'peakPricePerKwh', e.target.value)}
+                  placeholder="$ 0.45"
+                />
+              </>
+            )}
+          </Accordion>
+
+          {/* Connect to Chargefox */}
+          <Accordion
+            title="Connect to Chargefox"
+            description="Enter the station's chargebox identity to connect it to the Chargefox network."
+            isOpen={openAccordion === 'connectToChargefox'}
+            onToggle={() => setOpenAccordion(openAccordion === 'connectToChargefox' ? null : 'connectToChargefox')}
+            isCompleted={sectionStatus.connectToChargefox.completed}
+            statusIcon={sectionStatus.connectToChargefox.completed ? CheckCircle : Circle}
+          >
+            <p className="text-sm text-gray-600 mb-4">
+              Please configure your station with the secure OCPP URL (wss://). For Chargefox supplied SIM cards, also ensure the APN settings are correct. <a href="#" className="text-blue-600 hover:underline">Learn more</a>
+            </p>
+            <FormField
+              label="Chargebox identity (OCPP ID)"
+              type="text"
+              required
+              value={formData.connectToChargefox.ocppId}
+              onChange={(e) => handleChange('connectToChargefox', 'ocppId', e.target.value)}
+              placeholder="e.g. 123456789"
+              helpText="The charger identity typically found in the documentation or packaging."
+            />
+
+            {connectStatus === 'loading' && (
+              <div className="bg-blue-50 border-l-4 border-blue-400 text-blue-800 p-4 mb-4 flex items-center" role="status">
+                <Info size={20} className="mr-3 flex-shrink-0" />
+                <div>
+                  <p className="font-bold">Connection in progress. This may take up to 10 minutes.</p>
+                  <p>You can close this page and revisit it later.</p>
+                </div>
+              </div>
+            )}
+            {connectStatus === 'error' && (
+              <div className="bg-red-50 border-l-4 border-red-400 text-red-800 p-4 mb-4 flex items-center" role="alert">
+                <XCircle size={20} className="mr-3 flex-shrink-0" />
+                <div>
+                  <p className="font-bold">Connection unsuccessful. Please check the chargebox identity for typos and try again.</p>
+                  <p>{connectMessage}</p>
+                </div>
+              </div>
+            )}
+            {connectStatus === 'success' && (
+              <div className="bg-green-50 border-l-4 border-green-400 text-green-800 p-4 mb-4 flex items-center" role="alert">
+                <CheckCircle size={20} className="mr-3 flex-shrink-0" />
+                <p className="font-bold">Station successfully connected to Chargefox. You can now configure hardware details.</p>
+              </div>
+            )}
+
+            <button
+              onClick={handleConnectChargefox}
+              className={`mt-4 px-4 py-2 rounded-md font-semibold text-white transition-colors duration-200 ${
+                connectStatus === 'loading' || formData.connectToChargefox.ocppId.trim() === '' || connectStatus === 'success'
+                  ? 'bg-gray-400 cursor-not-allowed'
+                  : 'bg-blue-600 hover:bg-blue-700'
+              }`}
+              disabled={connectStatus === 'loading' || formData.connectToChargefox.ocppId.trim() === '' || connectStatus === 'success'}
+            >
+              {connectStatus === 'loading' ? 'Connecting...' : (connectStatus === 'success' ? 'Connected' : 'Connect')}
+            </button>
+            {/* Disconnect button removed */}
+          </Accordion>
+
+          {/* Hardware details (Dependent section) */}
+          <Accordion
+            title="Hardware details"
+            description="Enter station hardware, connector, and power settings."
+            isOpen={openAccordion === 'hardwareDetails'}
+            onToggle={() => setOpenAccordion(openAccordion === 'hardwareDetails' ? null : 'hardwareDetails')}
+            isCompleted={sectionStatus.hardwareDetails.completed}
+            isDependent={true}
+            isDisabled={!sectionStatus.connectToChargefox.completed}
+            statusIcon={!sectionStatus.connectToChargefox.completed ? Lock : (sectionStatus.hardwareDetails.completed ? CheckCircle : Circle)}
+          >
+            <p className={`text-sm mb-4 ${!sectionStatus.connectToChargefox.completed ? 'text-red-500' : 'text-gray-600'}`}>
+              {!sectionStatus.connectToChargefox.completed ? 'This section is dependent on "Connect to Chargefox" being completed.' : 'You can now enter hardware details.'}
+            </p>
+            <FormField
+              label="Charger Type"
+              type="text"
+              required
+              value={formData.hardwareDetails.chargerType}
+              onChange={(e) => handleChange('hardwareDetails', 'chargerType', e.target.value)}
+              placeholder="e.g., AC, DC Fast"
+            />
+            <FormField
+              label="Connector type"
+              type="text"
+              required
+              value={formData.hardwareDetails.connectorType}
+              onChange={(e) => handleChange('hardwareDetails', 'connectorType', e.target.value)}
+              placeholder="e.g., Type 2, CCS2"
+            />
+            <FormField
+              label="Final power rating (kW)"
+              type="number"
+              required
+              value={formData.hardwareDetails.powerRating}
+              onChange={(e) => handleChange('hardwareDetails', 'powerRating', e.target.value)}
+              placeholder="e.g., 22, 50"
+            />
+          </Accordion>
+        </div>
+
+        {/* Footer Buttons */}
+        <div className="p-6 border-t border-gray-200 flex justify-end space-x-3">
+          <button
+            onClick={onClose} // Assuming Cancel just closes without explicit save
+            className="px-6 py-3 rounded-md font-semibold text-gray-700 border border-gray-300 hover:bg-gray-50 transition-colors duration-200"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => onSave(formData)}
+            className="px-6 py-3 rounded-md font-semibold text-blue-600 border border-blue-600 hover:bg-blue-50 transition-colors duration-200"
+          >
+            Save Draft
+          </button>
+          <button
+            onClick={handlePreSubmit} // Calls pre-submit to show confirmation modal
+            className={`px-6 py-3 rounded-md font-semibold text-white transition-colors duration-200 ${isFormSubmittable ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-400 cursor-not-allowed'}`}
+            disabled={!isFormSubmittable}
+          >
+            Submit for Review
+          </button>
+        </div>
+      </div>
+
+      {/* Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showConfirmModal}
+        onClose={() => setShowConfirmModal(false)}
+        onConfirm={handleConfirmSubmit}
+        formData={formData}
+      />
+    </div>
+  );
+};
+
+// Main App Component
+const App = () => {
+  const [isPanelOpen, setIsPanelOpen] = useState(false);
+
+  const handleSave = (formData) => {
+    console.log("Form data saved:", formData);
+    alert("Form data saved! (Check console for details)");
+    setIsPanelOpen(false); // Close panel after saving
+  };
+
+  const handleSubmit = (formData) => {
+    console.log("Form data submitted for review:", formData);
+    alert("Form data submitted for review! (Check console for details)");
+    setIsPanelOpen(false); // Close panel after submission
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <button
+        onClick={() => setIsPanelOpen(true)}
+        className="px-8 py-4 bg-blue-600 text-white text-lg font-semibold rounded-lg shadow-md hover:bg-blue-700 transition-colors duration-200"
+      >
+        Add New Charge Station
+      </button>
+
+      <SidePanel
+        isOpen={isPanelOpen}
+        onClose={() => setIsPanelOpen(false)}
+        onSave={handleSave}
+        onSubmit={handleSubmit}
+      />
+    </div>
+  );
+};
+
+// Apply Poppins and IBM Plex Sans fonts via Google Fonts
+const fontStyles = `
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400&family=Poppins:wght@400;600&display=swap');
+
+  body {
+    font-family: 'Poppins', sans-serif; /* Default for text under 13px */
+    font-weight: 400; /* Regular font weight */
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 600; /* Semi-bold for headers */
+  }
+
+  /* Override specific elements that might have default font-weight */
+  .text-lg.font-semibold { /* Accordion titles */
+    font-family: 'Poppins', sans-serif;
+    font-weight: 600;
+  }
+
+  .text-sm.font-normal { /* Accordion descriptions */
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-weight: 400;
+  }
+
+  .text-sm.font-medium { /* Form field labels */
+    font-family: 'Poppins', sans-serif;
+    font-weight: 500; /* Ensure regular weight for labels */
+  }
+
+  .font-bold { /* Specific bold elements like alert messages */
+    font-family: 'Poppins', sans-serif; /* Use Poppins for bold emphasis */
+    font-weight: 600;
+  }
+
+  /* Ensure input fields also use IBM Plex Sans regular */
+  input, select, textarea {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 400;
+  }
+`;
+
+// Inject font styles into the document head
+const styleSheet = document.createElement("style");
+styleSheet.type = "text/css";
+styleSheet.innerText = fontStyles;
+document.head.appendChild(styleSheet);
+
+
+// Render the App
+const rootElement = document.getElementById('root');
+if (rootElement) {
+  const root = ReactDOM.createRoot(rootElement);
+  root.render(<App />);
+}
