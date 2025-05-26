@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Plus, CheckCircle2, AlertCircle } from 'lucide-react';
 import SidePanel from './components/SidePanel';
 
+
 // =============================================================================
 // 1. App.jsx (Main Application Entry)
 //    - Renders the main page layout with the "Add New Charge Station" button.
