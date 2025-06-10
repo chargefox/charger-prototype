@@ -75,11 +75,15 @@ const ConfirmationModal = ({ isOpen, onClose, onConfirm, formData }) => {
     <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white p-8 rounded-lg shadow-xl max-w-2xl w-full m-4">
         <h3 className="text-xl font-bold text-gray-800 mb-4">Review Station Details</h3>
+        <p className="text-sm text-gray-600 mb-4">
+          If you need help with your submission, please email <a href="mailto:support@chargefox.com" className="text-blue-600 hover:underline">support@chargefox.com</a>.
+        </p>
         <div className="max-h-96 overflow-y-auto mb-4 p-2 border border-gray-200 rounded">
           {summaryContent.map((item, index) => (
             <React.Fragment key={index}>{item}</React.Fragment>
           ))}
         </div>
+        
 
         <div className="bg-yellow-50 border-l-4 border-yellow-400 text-yellow-800 p-4 mb-4" role="alert">
           <p className="font-bold">Important Information:</p>
@@ -88,10 +92,6 @@ const ConfirmationModal = ({ isOpen, onClose, onConfirm, formData }) => {
             <li>Station reviews typically take 1-3 business days.</li>
           </ul>
         </div>
-
-        <p className="text-sm text-gray-600 mb-4">
-          If you need help with your submission, please email <a href="mailto:support@chargefox.com" className="text-blue-600 hover:underline">support@chargefox.com</a>.
-        </p>
 
         <div className="flex justify-end space-x-3">
           <button

@@ -48,6 +48,11 @@ const SidePanel = ({ isOpen, onClose, onSave, onSubmit, setIsFormSubmittable }) 
           portName: '',
           plugType: '',
           driversBringCable: false
+        },
+        {
+          portName: '',
+          plugType: '',
+          driversBringCable: false
         }
       ]
     }
@@ -300,7 +305,6 @@ const SidePanel = ({ isOpen, onClose, onSave, onSubmit, setIsFormSubmittable }) 
                 { value: 'public', label: 'Public' },
                 { value: 'private', label: 'Private' },
               ]}
-              helpText="For public stations, this name will be displayed to drivers in the app."
             />
             <FormField
               label="Location name"
@@ -319,17 +323,17 @@ const SidePanel = ({ isOpen, onClose, onSave, onSubmit, setIsFormSubmittable }) 
               onChange={(e) => handleChange('stationDetails', 'locationAddress', e.target.value)}
               placeholder="Enter location address"
             />
+            <p className="text-sm text-gray-600 mb-2 mt-6">
+              Drag the map pin to the precise position of the station to automatically update the coordinates.
+            </p>
             <div className="bg-gray-200 h-56 w-full rounded-md flex items-center justify-center text-gray-500 mb-4">
               <img
-                src="https://participate.melbourne.vic.gov.au/packages/the_hive_projects/images/the_hive_project_map/basemap_MapboxStreets.jpg"
+                src="https://www.readytechgo.com.au/wp-content/uploads/2018/11/Using-Google-Maps-to-Get-Around.png"
                 alt="Placeholder map of Melbourne"
                 className="w-full h-full object-cover rounded-md"
                 onError={(e) => { e.target.onerror = null; e.target.src="https://placehold.co/400x192/ADD8E6/000000?text=Map+Error"; }}
               />
             </div>
-            <p className="text-sm text-gray-600 mb-4">
-              Drag the map pin to the precise position of the station to automatically update the coordinates.
-            </p>
             <div className="flex space-x-4">
               <FormField
                 label="Latitude"
@@ -369,6 +373,7 @@ const SidePanel = ({ isOpen, onClose, onSave, onSubmit, setIsFormSubmittable }) 
             isCompleted={sectionStatus.stickersLabels.completed}
             statusIcon={sectionStatus.stickersLabels.completed ? CheckCircle2 : Circle}
           >
+            <p className="text-sm mb-4 text-gray-600">Please refer to our <a href="#" className="text-blue-600 underline">Station Guidelines</a> to determine the proper sticker placement for each charger model.</p>
             <FormField
               label="Are station stickers and port labels applied to the station?"
               type="radio"
@@ -455,7 +460,7 @@ const SidePanel = ({ isOpen, onClose, onSave, onSubmit, setIsFormSubmittable }) 
               value={formData.pricing.basePricePerKwh}
               onChange={(e) => handleChange('pricing', 'basePricePerKwh', e.target.value)}
               placeholder="$ 0.35"
-              helpText="Leave this field blank if charging will be free at this station."
+              helpText="Leave this field blank or enter 0 if charging will be free at this station."
             />
 
             <FormField
@@ -514,7 +519,7 @@ const SidePanel = ({ isOpen, onClose, onSave, onSubmit, setIsFormSubmittable }) 
           </Accordion>
 
           <Accordion
-            title="Connect to Chargefox"
+            title="Enter chargebox identity"
             description="Enter the station's chargebox identity to connect it to the Chargefox network."
             isOpen={openAccordion === 'connectToChargefox'}
             onToggle={() => setOpenAccordion(openAccordion === 'connectToChargefox' ? null : 'connectToChargefox')}
@@ -522,7 +527,9 @@ const SidePanel = ({ isOpen, onClose, onSave, onSubmit, setIsFormSubmittable }) 
             statusIcon={sectionStatus.connectToChargefox.completed ? CheckCircle2 : Circle}
           >
             <p className="text-sm text-gray-600 mb-4">
-              Please configure your station with the secure OCPP URL (wss://). For Chargefox supplied SIM cards, also ensure the APN settings are correct. <a href="#" className="text-blue-600 hover:underline">Learn more</a>
+              Please configure your station with the secure OCPP URL (wss://test.chargefox.com/ocpp/1.6). 
+
+              For Chargefox-supplied SIM cards, also ensure the APN is set to ipx2.m2mone. <a href="#" className="text-blue-600 hover:underline">Learn more</a>
             </p>
             <FormField
               label="Chargebox identity (OCPP ID)"
@@ -568,7 +575,7 @@ const SidePanel = ({ isOpen, onClose, onSave, onSubmit, setIsFormSubmittable }) 
               }`}
               disabled={connectStatus === 'loading' || formData.connectToChargefox.ocppId.trim() === '' || connectStatus === 'success'}
             >
-              {connectStatus === 'loading' ? 'Connecting...' : (connectStatus === 'success' ? 'Connected' : 'Connect')}
+              {connectStatus === 'loading' ? 'Testing connection...' : (connectStatus === 'success' ? 'Connected' : 'Check connection')}
             </button>
           </Accordion>
 
@@ -594,7 +601,6 @@ const SidePanel = ({ isOpen, onClose, onSave, onSubmit, setIsFormSubmittable }) 
               <FormField
                 label="Make"
                 type="text"
-                required
                 value={formData.hardwareDetails.make}
                 onChange={(e) => handleChange('hardwareDetails', 'make', e.target.value)}
                 placeholder="Fimer"
@@ -605,7 +611,6 @@ const SidePanel = ({ isOpen, onClose, onSave, onSubmit, setIsFormSubmittable }) 
               <FormField
                 label="Model"
                 type="text"
-                required
                 value={formData.hardwareDetails.model}
                 onChange={(e) => handleChange('hardwareDetails', 'model', e.target.value)}
                 placeholder="Electra DC / QCK-DC-AC"
@@ -649,7 +654,7 @@ const SidePanel = ({ isOpen, onClose, onSave, onSubmit, setIsFormSubmittable }) 
                     ]}
                     placeholder="Select port"
                     className="flex-1"
-                    helpText="e.g. a, b, c, d, e, f"
+                    helpText="Ensure this matches the port label sticker"
                   />
                   <FormField
                     label="Plug type"
@@ -691,14 +696,14 @@ const SidePanel = ({ isOpen, onClose, onSave, onSubmit, setIsFormSubmittable }) 
             onClick={() => { onSave(formData); onClose(); }}
             className="px-6 py-3 rounded-md font-semibold text-blue-600 border border-blue-600 hover:bg-blue-50 transition-colors duration-200"
           >
-            Save Draft
+            Save draft
           </button>
           <button
             onClick={handlePreSubmit}
             className={`px-6 py-3 rounded-md font-semibold text-white transition-colors duration-200 ${isFormSubmittable ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-400 cursor-not-allowed'}`}
             disabled={!isFormSubmittable}
           >
-            Submit for Review
+            Submit for review
           </button>
         </div>
       </div>
