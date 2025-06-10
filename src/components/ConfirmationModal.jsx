@@ -86,7 +86,7 @@ const ConfirmationModal = ({ isOpen, onClose, onConfirm, formData }) => {
         
 
         <div className="bg-yellow-50 border-l-4 border-yellow-400 text-yellow-800 p-4 mb-4" role="alert">
-          <p className="font-bold">Important Information:</p>
+          <p className="font-bold">Important information:</p>
           <ul className="list-disc list-inside text-sm mt-2">
             <li>Once submitted, you cannot edit your station while it is in review.</li>
             <li>Station reviews typically take 1-3 business days.</li>

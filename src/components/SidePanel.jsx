@@ -400,7 +400,7 @@ const SidePanel = ({ isOpen, onClose, onSave, onSubmit, setIsFormSubmittable }) 
               placeholder="Enter the station number"
               helpText="Enter the Chargefox station number printed on the sticker."
             />
-            <p className='text-sm text-gray-600 mb-2 mt-6'>Upload photo evidence of the completed install, including sticker placement.</p>
+            <p className='text-sm text-gray-600 mb-2 mt-6'>Please attach photo(s) of the completed installation including sticker placements.</p>
             <div className="bg-blue-50 border-2 border-dotted rounded-lg border-blue-400 p-4 mb-4 flex items-center">
               <input type="file" className='mutiple text-sm'/>
             </div>
@@ -598,7 +598,7 @@ const SidePanel = ({ isOpen, onClose, onSave, onSubmit, setIsFormSubmittable }) 
             </p>
             <div className="bg-blue-50 border-l-4 border-blue-400 text-blue-800 p-4 mb-4 flex items-center" role="info">
               <Info size={20} className="mr-3 flex-shrink-0" />
-              <p className="text-sm">Some information was populated automatically by OCPP and cannot be manually overridden.</p>
+              <p className="text-sm">Make, model, and the number of connectors for this station has been automatically populated by OCPP and cannot be manually edited.</p>
             </div>
 
             <div className="flex space-x-4">
