@@ -150,7 +150,7 @@ function App() {
           {/* Card Content */}
           {activeTab === 'details' && (
             <div className="flex flex-col items-center justify-center py-8">
-              <h2 className="text-2xl font-bold text-grey-700 mb-2 text-center">Finish setting up your station</h2>
+              <h2 className="text-2xl font-bold text-grey-700 mb-2 text-center">Set up your station</h2>
               <p className="text-base text-grey-700 mb-6 text-center">Get your station ready so that drivers can start charging</p>
               <button
                 onClick={() => setIsSidePanelOpen(true)}
@@ -159,7 +159,7 @@ function App() {
                 Add station details
               </button>
               <div className="bg-slate-100 rounded-md flex items-center justify-center w-full h-80 mx-auto">
-                <span className="text-xl font-semibold text-gray-600">Charging Station</span>
+                <span className="text-xl font-semibold text-gray-600">Charge station</span>
               </div>
             </div>
           )}
